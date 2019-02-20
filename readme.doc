@@ -1,1 +1,27 @@
+•	Create New Folder - Create repository 
+•	install system enviroment
+•	git init
+•	npm init...
+•	create 2 folder for
+•	client
+•	server
+•	In server (CRUD)
+•	Use with express server
+•	GET /api/houses (responds with list of houses)
+•	POST /api/houses (creates new house with data provided from client, responds with freshly created object)
+•	GET /api/houses/1 (responds with data about a house with id specified in url)
+•	DELETE /api/houses/1 (removes object with id specified in url from dataset, returns it)
+•	ANY OTHER request that starts with /api should result in 404
+•	server should serve requested static assets ( from /client/build folder)
+•	ANY OTHER GET request should respond with content of /client/build/index.html file
+•	ANY OTHER request should result in 404
+•	client:
+•	base create-react-app with react-router
+•	client should talk to server via api (don't forget we run backend app on different port)
+•	supported urls(pages):
+•	HOME
+•	LIST of houses - should load and render list of houses using api GET /api/houses
+•	ONE house by id - should load and renderhouse data with id provided in url
+•	404
+•	try to implement LOADING, ERROR and EMPTY states when work with data fetching
 

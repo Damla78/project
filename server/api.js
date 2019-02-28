@@ -1,27 +1,97 @@
 const apiRouter = require('express').Router();
+const db = require('./db');
+const { validateHouseInput, houseAsSqlParams } = require('./validation');
 
 let lastId = 3;
 
 const housesData = [
-  {
-    id: 1,
-    price: 1000
-  }, {
-    id: 2,
-    price: 2000
-  }, {
-    id: 3,
-    price: 3000
-  }
+  { id: 1, price: 500 },
+  { id: 2, price: 1000 },
 ]
+/*const housesData = [
+  [
+    'www.adres1.nl', '27.2.2019', 'Nederland', 'Amstelveen', 'Punter 56 1186 RE',
+    null, null, 75, 4, 1000.00, 'EUR', null, null, null, 0
+  ],
+  [
+    'www.adres2.nl', '27.2.2019', 'Nederland', 'Amstelveen', 'Punter 56 1186 RE',
+    null, null, 75, 4, 1000.00, 'EUR', null, null, null, 0
+  ]
+];*/
+
+const addHousesSql = `insert into houses (
+link,
+  market_date,
+  location_country,
+  location_city,
+  location_address,
+  location_coordinates_lat,
+  location_coordinates_lng,
+  size_living_area,
+  size_rooms,
+  price_value,
+  price_currency,
+  description,
+  title,
+  images,
+  sold
+  ) values ?;`;
 
 apiRouter.route('/houses')
   .get((req, res) => {
     res.send(housesData);
   })
-  .post((req, res) => {
-    let { price } = req.body;
-    if (typeof price === 'undefined') {
+  .post(async (req, res) => {
+    if (!Array.isArray(req.body)) {
+      return res.status(400).json({ error: 'Input data should be an array.' });
+    }
+
+    const processedData = req.body.map(houseObj => { return validateHouseInput(houseObj) });
+
+    const validData = [];
+    const invalidData = [];
+
+    processedData.forEach(el => {
+      if (el.valid) {
+        validData.push(el);
+      } else {
+        invalidData.push(el);
+      }
+    });
+
+    const report = {
+      valid: validData.length,
+      invalid: {
+        count: invalidData.length,
+        items: invalidData
+      }
+    };
+
+    if (validData.length) {
+      try {
+        //db.connect();
+
+        const housesData = validData.map(el => houseAsSqlParams(el.raw));
+        await db.queryPromise(addHousesSql, [housesData]);
+        //console.log('housesData: ', housesData);
+
+        //db.end();
+
+        return res.json(report);
+      } catch (err) {
+        return res.status(500).json({ error: 'Database error while recording new information.' + err.message })
+      }
+
+    } else {
+      res.json(report);
+    }
+
+    //console.log(processedData);
+    //res.json(report);
+
+    /* let { price } = req.body;
+   
+   if (typeof price === 'undefined') {
       res.status(400).end('Price field is required.');
       return;
     }
@@ -31,14 +101,25 @@ apiRouter.route('/houses')
     if (Number.isNaN(price) || price <= 0) {
       res.status(400).end('Price should be positive number.');
     } else {
+
+
       lastId++;
       let item = {
         id: lastId,
         price
       }
+      //db.connect();
+      //db.query(addHousesSql, housesData, cb);
+      //db.end();
       housesData.push(item);
-      res.json(item).send(item);
-    }
+
+      res.setHeader('content-type', 'application/json');
+      res.writeHead(200);
+      res.write(item);
+      res.end(item);
+
+      //res.json(item).send(item);
+    }*/
 
   });
 

@@ -45,8 +45,8 @@ apiRouter.route('/houses')
     if (!Array.isArray(req.body)) {
       return res.status(400).json({ error: 'Input data should be an array.' });
     }
-
     const processedData = req.body.map(houseObj => { return validateHouseInput(houseObj) });
+    //console.log(processedData);
 
     const validData = [];
     const invalidData = [];
@@ -86,40 +86,7 @@ apiRouter.route('/houses')
       res.json(report);
     }
 
-    //console.log(processedData);
-    //res.json(report);
 
-    /* let { price } = req.body;
-   
-   if (typeof price === 'undefined') {
-      res.status(400).end('Price field is required.');
-      return;
-    }
-
-    price = parseInt(price);
-
-    if (Number.isNaN(price) || price <= 0) {
-      res.status(400).end('Price should be positive number.');
-    } else {
-
-
-      lastId++;
-      let item = {
-        id: lastId,
-        price
-      }
-      //db.connect();
-      //db.query(addHousesSql, housesData, cb);
-      //db.end();
-      housesData.push(item);
-
-      res.setHeader('content-type', 'application/json');
-      res.writeHead(200);
-      res.write(item);
-      res.end(item);
-
-      //res.json(item).send(item);
-    }*/
 
   });
 

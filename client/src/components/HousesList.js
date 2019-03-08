@@ -1,6 +1,8 @@
 import React from 'react';
 
-import { Link } from 'react-router-dom';
+
+import { Link, Route, Switch } from 'react-router-dom';
+import Pages from './Pages';
 
 export default class HousesList extends React.Component {
   constructor(props) {
@@ -10,41 +12,227 @@ export default class HousesList extends React.Component {
       houses: [],
       error: null,
       loading: false,
-      newPrice: ''
+      perPage: 2,
+      total: 0,
+      searchCriteria: {
+        price_min: 0,
+        price_max: 1000000,
+        location_city: "",
+        location_country: "",
+        order: "location_country_asc",
+        page: 1
+      }
     }
   }
-  componentDidMount() {
-    this.setState({ loading: true, error: null });
 
-    fetch('http://localhost:4321/api/houses')
+
+  fetchHouses = (updateUrl = false) => {
+    const { searchCriteria } = this.state;
+    /*const queryString = Object.keys(this.searchCriteria)
+      .map((field) => `${field}=${encodeURI(this.searchCriteria[field])}`)
+      .join(`&`);*/
+    const queryFilterString = Object.keys(searchCriteria)
+      .reduce((query, field) => {
+        const val = searchCriteria[field];
+
+        if (val !== null && val !== '') {
+          query.push(`${field}=${encodeURI(val)}`);
+        }
+        return query;
+      }, [])
+      .join('&');
+    console.log("queryFilterString" + queryFilterString);
+    //if (updateUrl) {
+    this.props.history.push(this.props.location.pathname + '?' + queryFilterString);
+    //}
+
+    return fetch(`http://localhost:4321/api/houses?${queryFilterString}`)
       .then(res => res.json())
-      .then(HousesList => {
-        this.setState({ houses: HousesList, error: null, loading: false });
-        console.log(HousesList);
+      .then((HousesList, perPage, totalNumHouses, error) => {//, error
+        if (error) {
+          this.setState({ houses: [], loading: false, error })
+        } else {
+          console.log("HousesList: ", HousesList.houses);
+          console.log('perPage: ', HousesList.HOUSES_PER_PAGE);
+          console.log('totalNumHouses: ', HousesList.totalNumHouses[0].total);
+          this.setState({
+            houses: HousesList.houses,
+            error: null,
+            loading: false,
+            perPage: HousesList.HOUSES_PER_PAGE,
+            total: HousesList.totalNumHouses[0].total
+          });
+        }
+
       }).catch(() => {
         this.setState({ error: 'Houses could not be loaded. Sth is wrong.', loading: false });
       })
 
+
+  }
+
+  componentDidMount() {
+
+    this.setState({
+      loading: true,
+      error: null,
+      searchCriteria: { ...this.state.searchCriteria }
+    }, this.fetchHouses);
+
+  }
+
+  handleInputChange = (e) => {
+    const { name, value } = e.target;
+    this.setState({
+      ...this.state,
+      searchCriteria: {
+        ...this.state.searchCriteria,
+        [name]: value
+      }
+    });//, () => this.fetchHouses(true)
+    console.log(name + " " + value);
+  }
+
+  handleSubmit = (e) => {
+    e.preventDefault();
+    this.fetchHouses();
+    //var newurl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?newParameter=1';
+    //window.history.pushState({ path: newurl }, '', newurl);
+
+  }
+
+  pageChange = (page) => {
+    console.log('**********page: ' + page);
+    this.setState({
+      ...this.state,
+      searchCriteria: {
+        ...this.state.searchCriteria,
+        page: page
+      }
+    });
+    this.fetchHouses();
   }
 
   render() {
-    const { houses, error, loading } = this.state;
-    if (loading) {
-      return <div>loading...</div>
-    }
+    const { houses, error, loading, perPage, total,
+      searchCriteria: {
+        price_min,
+        price_max,
+        location_city,
+        location_country,
+        order,
+        page
+      } } = this.state;
 
-    if (error) {
-      return <div>{error}</div>
-    }
+
+    console.log('RENDER......perPage:' + perPage + ' total: ' + total + ' page: ' + page);
+
+    //const totalPage = Math.ceil(total / perPage);
 
     return (
+      <div>
+        <form onSubmit={this.handleSubmit} >
+          <div>
+            <label>
+              <strong>Price min:</strong>
+              <select name="price_min" value={price_min} onChange={this.handleInputChange}>
+                <option value="0">0</option>
+                <option value="50000">50000</option>
+                <option value="100000">100000</option>
+                <option value="200000">200000</option>
+                <option value="500000">500000</option>
+              </select>
+            </label>
+          </div>
 
-      <div>{
-        houses.map((houseObj) => (
-          <div key={houseObj.id}>
-            <Link to={`/houses/${houseObj.id}`} ><span>id: </span>{houseObj.id}  <span>   price: </span>{houseObj.price} </Link>
-          </div>))
-      }</div>
+          <br />
+
+          <div>
+            <label>
+              <strong>Price max:</strong>
+              <select name="price_max" value={price_max} onChange={this.handleInputChange}>
+                <option value="50000">50000</option>
+                <option value="100000">100000</option>
+                <option value="200000">200000</option>
+                <option value="500000">500000</option>
+                <option value="1000000">1000000</option>
+              </select>
+            </label>
+          </div>
+
+          <br />
+
+          <div>
+            <label>
+              <strong>City:</strong>
+              <select name="location_city" value={location_city} onChange={this.handleInputChange}>
+                <option value="">Select city</option>
+                <option value="Kiev">Kiev</option>
+                <option value="Amsterdam">Amsterdam</option>
+              </select>
+            </label>
+          </div>
+
+          <br />
+
+          <div>
+            <label>
+              <strong>Country:</strong>
+              <select name="location_country" value={location_country} onChange={this.handleInputChange}>
+                <option value="">Select country</option>
+                <option value="Nederland">Nederland</option>
+                <option value="Amsterdam">Amsterdam</option>
+              </select>
+            </label>
+          </div>
+
+          <br />
+
+          <div>
+            <label>
+              <strong>Order:</strong>
+              <select name="order" value={order} onChange={this.handleInputChange}>
+                <option value="">Select order</option>
+                <option value="location_country_asc">Country Asc</option>
+                <option value="location_country_desc">Country Desc</option>
+                <option value="price_value_asc">Price Asc</option>
+                <option value="price_value_desc">Price Desc</option>
+              </select>
+            </label>
+          </div>
+
+          <br />
+
+          <div>
+            <button type="submit" value="Submit">Search</button>
+          </div>
+
+          <br />
+          <br />
+          {loading && <div>loading...</div>}
+          {error && <div>{error}</div>}
+          {
+            houses.length === 0 ? < div > No houses yet.</div> :
+              (
+                <div>{
+                  houses.map((houseObj) => (
+                    <div key={houseObj.id}>
+                      <Link to={`/houses/${houseObj.id}`} >
+                        <span><strong>id: </strong> </span>{houseObj.id}
+                        <span> <strong>  price: </strong></span>{houseObj.price_value}
+                        <span><strong>   country:</strong> </span>{houseObj.location_country}
+                        <span><strong>   city: </strong></span>{houseObj.location_city}</Link>
+                    </div>))
+                }</div>)
+          }
+        </form >
+        {total && <div><Pages
+          page={this.state.searchCriteria.page}
+          perPage={this.state.perPage}
+          total={this.state.total}
+          pageChange={this.pageChange}>
+        </Pages></div>}
+      </div>
     );
   }
 }

@@ -2,12 +2,13 @@ const apiRouter = require('express').Router();
 const db = require('./db');
 const { validateHouseInput, houseAsSqlParams } = require('./validation');
 
-let lastId = 3;
+const HOUSES_PER_PAGE = 5;
+/*let lastId = 3;
 
 const housesData = [
   { id: 1, price: 500 },
   { id: 2, price: 1000 },
-]
+]*/
 /*const housesData = [
   [
     'www.adres1.nl', '27.2.2019', 'Nederland', 'Amstelveen', 'Punter 56 1186 RE',
@@ -38,8 +39,78 @@ link,
   ) values ?;`;
 
 apiRouter.route('/houses')
-  .get((req, res) => {
-    res.send(housesData);
+  .get(async (req, res) => {
+    try {
+      let { price_min = 0,
+        price_max = 1000000,
+        location_city = "",
+        location_country = "",
+        order = "location_country_asc",
+        page = 1
+      } = req.query;
+
+      price_min = parseInt(price_min);
+      price_max = parseInt(price_max);
+      page = parseInt(page);
+
+      if (Number.isNaN(price_min) || price_min < 0 || Number.isNaN(price_max) || price_max < 0) {
+        return res.status(400).json({
+          error: "Price must be positive number."
+        })
+      } else if (price_max < price_min) {
+        return res.status(400).json({ error: "Price max must be bigger than price min." });
+      }
+
+      if (Number.isNaN(page) || page < 0) {
+        return res.status(400).json({
+          error: "Page must be positive number."
+        })
+      }
+
+      let order_field, order_direction;
+      const index = order.lastIndexOf('_');
+      if (index > 0) {
+        order_field = order.slice(0, index);
+        order_direction = order.slice(index + 1);
+
+        if (['asc', 'desc'].indexOf(order_direction) === -1) {
+          return res.status(400).json({
+            error: "'order' param is wrong."
+          })
+        }
+      } else {
+        return res.status(400).json({
+          error: "'order' param is wrong."
+        })
+      }
+
+      const offset = (page - 1) * HOUSES_PER_PAGE;
+
+      const conditions = [`(price_value between ? and ?)`];
+      const params = [price_min, price_max];
+
+      if (location_city.length) {
+        conditions.push(`location_city=?`);
+        params.push(location_city);
+      }
+
+      const sqlGetQuery = `select * from houses
+                            where ${conditions.join(' and ')}
+                            order by
+                              ${ db.escapeId(order_field, true)} ${order_direction}
+                            limit ${HOUSES_PER_PAGE}
+                            offset ${offset}`;
+      const sqlTotalHouses = `select count(*) as total from houses`;
+
+
+      const totalNumHouses = await db.queryPromise(sqlTotalHouses);
+      const houses = await db.queryPromise(sqlGetQuery, params);//db.queryPromiseStandal...
+      //console.log(houses);
+      res.send({ houses, HOUSES_PER_PAGE, totalNumHouses });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+
   })
   .post(async (req, res) => {
     if (!Array.isArray(req.body)) {

@@ -9,6 +9,7 @@ var db = mysql.createConnection({
 });
 
 db.queryPromise = promisify(db.query);
+db.queryPromiseStandalone = promisify(db.query.bind(db));
 module.exports = db;
 
 /*

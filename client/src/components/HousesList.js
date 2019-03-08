@@ -109,8 +109,8 @@ export default class HousesList extends React.Component {
         ...this.state.searchCriteria,
         page: page
       }
-    });
-    this.fetchHouses();
+    }, this.fetchHouses);
+
   }
 
   render() {
@@ -126,8 +126,6 @@ export default class HousesList extends React.Component {
 
 
     console.log('RENDER......perPage:' + perPage + ' total: ' + total + ' page: ' + page);
-
-    //const totalPage = Math.ceil(total / perPage);
 
     return (
       <div>

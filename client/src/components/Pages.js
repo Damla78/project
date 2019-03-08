@@ -18,18 +18,20 @@ class Pages extends React.Component {
   }
 
   forward = () => {
+
+    const pageNum = this.state.page + 1;
+    console.log("*****pageNum: " + pageNum);
     this.setState({
       ...this.state,
-      page: this.state.page + 1
-    });
-    this.props.pageChange(this.state.page);
+      page: pageNum
+    }, this.props.pageChange(pageNum));
   }
   backward = () => {
+    const pageNum = this.state.page - 1;
     this.setState({
       ...this.state,
-      page: this.state.page - 1
-    });
-    this.props.pageChange(this.state.page);
+      page: pageNum
+    }, this.props.pageChange(pageNum));
   }
 
   render() {

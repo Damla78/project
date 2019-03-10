@@ -1,7 +1,7 @@
 import React from 'react';
 
 
-import { Link, Route, Switch } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import Pages from './Pages';
 
 export default class HousesList extends React.Component {
@@ -10,6 +10,7 @@ export default class HousesList extends React.Component {
 
     this.state = {
       houses: [],
+      cities: [],
       error: null,
       loading: false,
       perPage: 2,
@@ -25,6 +26,18 @@ export default class HousesList extends React.Component {
     }
   }
 
+  async componentDidMount() {
+
+    await this.fetchCities();//ASK without await console is empty????
+
+    this.setState({
+      ...this.state,
+      loading: true,
+      error: null,
+      searchCriteria: { ...this.state.searchCriteria }
+    }, this.fetchHouses);
+
+  }
 
   fetchHouses = (updateUrl = false) => {
     const { searchCriteria } = this.state;
@@ -52,9 +65,6 @@ export default class HousesList extends React.Component {
         if (error) {
           this.setState({ houses: [], loading: false, error })
         } else {
-          console.log("HousesList: ", HousesList.houses);
-          console.log('perPage: ', HousesList.HOUSES_PER_PAGE);
-          console.log('totalNumHouses: ', HousesList.totalNumHouses[0].total);
           this.setState({
             houses: HousesList.houses,
             error: null,
@@ -63,23 +73,27 @@ export default class HousesList extends React.Component {
             total: HousesList.totalNumHouses[0].total
           });
         }
-
       }).catch(() => {
         this.setState({ error: 'Houses could not be loaded. Sth is wrong.', loading: false });
       })
-
-
   }
 
-  componentDidMount() {
+  fetchCities = () => {
 
-    this.setState({
-      loading: true,
-      error: null,
-      searchCriteria: { ...this.state.searchCriteria }
-    }, this.fetchHouses);
-
+    return fetch(`http://localhost:4321/api/houses/cities`)
+      .then(res => res.json())
+      .then((cities, error) => {//, error
+        if (error) {
+          this.setState({ cities: [], error })
+        } else {
+          this.setState({ cities: cities });
+        }
+      }).catch(() => {
+        this.setState({ error: 'Cities could not be loaded. Sth is wrong.' });
+      })
   }
+
+
 
   handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -96,8 +110,6 @@ export default class HousesList extends React.Component {
   handleSubmit = (e) => {
     e.preventDefault();
     this.fetchHouses();
-    //var newurl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?newParameter=1';
-    //window.history.pushState({ path: newurl }, '', newurl);
 
   }
 
@@ -114,7 +126,7 @@ export default class HousesList extends React.Component {
   }
 
   render() {
-    const { houses, error, loading, perPage, total,
+    const { houses, cities, error, loading, perPage, total,
       searchCriteria: {
         price_min,
         price_max,
@@ -163,11 +175,17 @@ export default class HousesList extends React.Component {
           <div>
             <label>
               <strong>City:</strong>
-              <select name="location_city" value={location_city} onChange={this.handleInputChange}>
+              {cities && <select name="location_city" value={location_city} onChange={this.handleInputChange}>
+                <option value="">Select city</option>
+                {cities.map((city, i) => (
+                  <option key={i} value={city.location_city}>{city.location_city}</option>
+                ))}
+                {/*
+                <select name="location_city" value={location_city} onChange={this.handleInputChange}>
                 <option value="">Select city</option>
                 <option value="Kiev">Kiev</option>
-                <option value="Amsterdam">Amsterdam</option>
-              </select>
+    <option value="Amsterdam">Amsterdam</option>*/}
+              </select>}
             </label>
           </div>
 
@@ -178,7 +196,7 @@ export default class HousesList extends React.Component {
               <strong>Country:</strong>
               <select name="location_country" value={location_country} onChange={this.handleInputChange}>
                 <option value="">Select country</option>
-                <option value="Nederland">Nederland</option>
+                <option value="Netherlands">Netherlands</option>
                 <option value="Amsterdam">Amsterdam</option>
               </select>
             </label>

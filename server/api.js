@@ -3,22 +3,7 @@ const db = require('./db');
 const { validateHouseInput, houseAsSqlParams } = require('./validation');
 
 const HOUSES_PER_PAGE = 5;
-/*let lastId = 3;
 
-const housesData = [
-  { id: 1, price: 500 },
-  { id: 2, price: 1000 },
-]*/
-/*const housesData = [
-  [
-    'www.adres1.nl', '27.2.2019', 'Nederland', 'Amstelveen', 'Punter 56 1186 RE',
-    null, null, 75, 4, 1000.00, 'EUR', null, null, null, 0
-  ],
-  [
-    'www.adres2.nl', '27.2.2019', 'Nederland', 'Amstelveen', 'Punter 56 1186 RE',
-    null, null, 75, 4, 1000.00, 'EUR', null, null, null, 0
-  ]
-];*/
 
 const addHousesSql = `insert into houses (
 link,
@@ -156,10 +141,20 @@ apiRouter.route('/houses')
     } else {
       res.json(report);
     }
-
-
-
   });
+
+const getCities = async (req, res) => {
+  try {
+    const sqlGetDiffCities = `select distinct location_city from houses;`
+    const diffCityList = await db.queryPromise(sqlGetDiffCities);
+
+    res.send(diffCityList);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+apiRouter.route('/houses/cities')
+  .get(getCities);
 
 apiRouter.route('/houses/:id')
   .get((req, res) => {

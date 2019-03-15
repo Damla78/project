@@ -11,6 +11,7 @@ export default class HouseDetails extends React.Component {
     }
   }
   componentDidMount() {
+    //console.log(this.props);
     const { id } = this.props.match.params;
 
     this.setState({ loading: true, error: null });
@@ -18,6 +19,7 @@ export default class HouseDetails extends React.Component {
     fetch(`http://localhost:4321/api/houses/${id}`)
       .then(res => res.json())
       .then(data => {
+        console.log("DATA: " + JSON.stringify(data));
         if (data.error) {
           this.setState({ error: data.error, loading: false })
         } else {
@@ -39,10 +41,11 @@ export default class HouseDetails extends React.Component {
     if (error) {
       return <div>{error}</div>
     }
-
+    //ASK I couldn't retrieved info
     return (<div>
-      id:{houseDetails.id}<br />
-      price:{houseDetails.price}<br />
+
+      {/*id:{houseDetails.id}<br />
+      price:{houseDetails.price_value}<br />*/}
     </div>);
   }
 }

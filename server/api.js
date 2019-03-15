@@ -157,33 +157,35 @@ apiRouter.route('/houses/cities')
   .get(getCities);
 
 apiRouter.route('/houses/:id')
-  .get((req, res) => {
+  .get(async (req, res) => {
     const { id } = req.params;
-    const sqlOneHouse = `select * from houses where id=${id}`;
-    const house = housesData.find(house => { return house.id === parseInt(id, 10) });
-    if (house) {
-      res.send(house);
-    } else {
-      res.status(404).json({ error: 'No item is found.' });
+    const sqlGetOneHouse = `select * from houses where id=${id}`;
+    try {
+      const house = await db.queryPromise(sqlGetOneHouse);
+      if (house) {
+        res.json(house);
+      } else {
+        res.status(404).json({ error: 'No item is found.' });
+      }
+    } catch (error) {
+      res.status(500).json({ error: `error while data retrieving: ${error.message}` });
     }
 
+
+
   })
-  .delete((req, res) => {
+  .delete(async (req, res) => {
     const { id } = req.params;
 
     let wasDeleted = false;
-    const indexHouse = housesData.findIndex(house => { return house.id === parseInt(id) });
-
-    if (indexHouse > -1) {
-      housesData.splice(indexHouse, 1);
-      wasDeleted = true;
+    try {
+      const sqlDelete = `delete from houses where id=${id}`;
+      await db.queryPromise(sqlDelete);
+      res.send(`${id} deleted`);
+    } catch (error) {//If there is an error while deleting, what should I return status=200 or status=500
+      res.status(500).json({ error: `error while data deleting: ${error.message}` });
     }
 
-    if (wasDeleted) {
-      res.send('Deleted');
-    } else {
-      res.send('Can not deleted...');
-    }
   })
 
 apiRouter.use((req, res) => {

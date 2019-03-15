@@ -28,13 +28,26 @@ export default class HousesList extends React.Component {
 
   async componentDidMount() {
 
-    await this.fetchCities();//ASK without await console is empty????
+    await this.fetchCities();
+
+    const { search } = this.props.location;
+    let queryParams = {};
+    if (search !== '') {
+      queryParams = search
+        .slice(1)
+        .split('&')
+        .map(item => item.split('='))
+        .reduce((prev, [key, value]) => {
+          prev[key] = value;
+          return prev;
+        }, {});
+    }
 
     this.setState({
       ...this.state,
       loading: true,
       error: null,
-      searchCriteria: { ...this.state.searchCriteria }
+      searchCriteria: { ...this.state.searchCriteria, ...queryParams }
     }, this.fetchHouses);
 
   }

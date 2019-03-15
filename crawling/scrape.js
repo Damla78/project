@@ -1,149 +1,159 @@
-var express = require('express');
-var path = require('path');
-var cherrio = require('cheerio');
-var app = express();
+var cheerio = require('cheerio');
 var request = require('request');
 var fs = require('fs');
-var port = 8080;
 
 
-//const HouseList = [];
 
-let fileIsEmpty = true;
+const houseList = [];
+
 let itemLastId = 0;
 var url = 'https://www.huislijn.nl/koopwoning/nederland/groningen/groningen';
 urlNext = url;
-loadPage(urlNext);
-
-for (let pageIndex = 2; pageIndex < 13; pageIndex++) {
-  urlNext = url + '?page=' + pageIndex + '&order=relevance';
-  loadPage(urlNext);
-}
-
-function loadPage(url) {
-  request(url, async function (err, resp, body) {
 
 
-    if (!err && resp.statusCode === 200) {
+async function loadOneHouse($, value) {
+  const houseObj = {
+    "id": 0,
+    "link": "",
+    "market_date": "",
+    "location_country": "",
+    "location_city": "",
+    "location_address": "",
+    "location_coordinates_lat": null,
+    "location_coordinates_lng": null,
+    "size_living_area": null,
+    "size_rooms": null,
+    "price_value": null,
+    "price_currency": null,
+    "description": "",
+    "title": "",
+    "images": "",
+    "sold": 0
+  }
 
-      var $ = cherrio.load(body);
+  await new Promise(resolve => setTimeout(resolve, 3000)); // 3 sec
 
-      //in the web page, visit all houses
-      const str = $('hl-search-object-display').text();
+  let detailedLink = 'https://www.huislijn.nl' + $(value).attr('href');
 
-      const searchLength = $('.object-panel > a', str).length;
-      await $('.object-panel > a', str).each(async (index, value) => {
+  itemLastId++;
+  console.log(itemLastId + '. item is added.');
+  houseObj.id = itemLastId;
+  houseObj.link = detailedLink;
+  houseObj.market_date = '2019-03-14';
 
-        const HouseObj = {
-          "id": 0,
-          "link": "",
-          "market_date": "",
-          "location_country": "",
-          "location_city": "",
-          "location_address": "",
-          "location_coordinates_lat": null,
-          "location_coordinates_lng": null,
-          "size_living_area": null,
-          "size_rooms": null,
-          "price_value": null,
-          "price_currency": null,
-          "description": "",
-          "title": "",
-          "images": "",
-          "sold": 0
+  return new Promise((resolve, reject) => {
+    request(detailedLink, async function (err, resp, bodyDetailed) {//examine detailed info in each page.
+      if (!err && resp.statusCode === 200) {
+        let $detail = cheerio.load(bodyDetailed);
+
+        let address1 = $detail('.address-line').text().trim();
+        let zip = $detail('.zip').text().trim();
+        let place = $detail('.place').text().trim();
+
+        houseObj.location_country = 'Netherlands';
+        houseObj.location_city = place;
+        houseObj.location_address = address1 + ' ' + zip;
+
+        let coords = JSON.parse($detail('hl-page-detail').attr(':location'));
+        houseObj.location_coordinates_lat = parseFloat(coords.lat);
+        houseObj.location_coordinates_lng = parseFloat(coords.lon);
+
+        let rooms = $detail('#kenmerken table td').eq(5).text().trim();
+        houseObj.size_rooms = parseInt(rooms);
+
+        let woonOppervlakte = $detail('#kenmerken table td').eq(9).text().trim()
+        houseObj.size_living_area = parseInt(woonOppervlakte, 10);
+
+        /**Price */
+        let pricing = $detail('.pricing > h2').text().trim();
+        let tempPricing = pricing.split(' ');
+        if (tempPricing[0] === '€') {
+          houseObj.price_currency = 'EUR';
+        } else if (tempPricing[0] === '$') {
+          houseObj.price_currency = 'USD';
+        } else if (tempPricing[0] === '£') {
+          houseObj.price_currency = 'GBP'
         }
+        houseObj.price_value = tempPricing[1].replace('.', '');
+        /**Price */
 
-        await new Promise(resolve => setTimeout(resolve, 10000)); // 3 sec
+        let description = $detail(".content > p").eq(1).text();
+        houseObj.description = description;
+        let title = $detail("meta[property='og:title']").attr('content');
+        houseObj.title = title;
 
-        let detailedLink = 'https://www.huislijn.nl' + $(value).attr('href');
+        /**Image addresses */
+        $_mainImg = cheerio.load($detail('hl-object-media noscript').text().trim())//Main Img
+        let mainImg_add = $_mainImg('img').attr('src');
+        let Img_addresses = mainImg_add;
+        const imgLength = $detail('.media-slot .content > img').length;//small images
+        for (let i = 0; i < imgLength; i++) {
+          let ii = i + 1;
+          let searchStr = '.media-slot-' + ii + ' .content > img';
+          let smallImg_add = $detail(searchStr).attr('src');
+          Img_addresses = Img_addresses + ',' + smallImg_add;
+        }
+        houseObj.images = Img_addresses;
+        /**Image addresses */
+        let sold = $detail('h2').attr('style', 'display:inline-block;').text().trim();
+        if (sold.includes('Verkocht')) {
+          houseObj.sold = 1;
+        } else {
+          houseObj.sold = 0;
+        }
+        houseList.push(houseObj);
+        resolve();
+      } else {
+        console.log('There is a problem in house detail request loop');
+        reject();
+      }
+    })//request
+  });
+}
+function loadPage(url) {
+  return new Promise((resolve, reject) => {
+    request(url, async function (err, resp, body) {
+      if (!err && resp.statusCode === 200) {
 
-        itemLastId++;
-        console.log(itemLastId + '. item is added.');
-        HouseObj.id = itemLastId;
-        HouseObj.link = detailedLink;
-        HouseObj.market_date = '2019-03-14';
+        var $ = cheerio.load(body);
 
-        request(detailedLink, async function (err, resp, bodyDetailed) {//examine detailed info in each page.
-          if (!err && resp.statusCode === 200) {
-            $_detail = cherrio.load(bodyDetailed);
+        //in the web page, visit all houses
+        const str = $('hl-search-object-display').text();
 
-            let address1 = $_detail('.address-line').text().trim();
-            let zip = $_detail('.zip').text().trim();
-            let place = $_detail('.place').text().trim();
+        const newPageHuiseList = []
+        await $('.object-panel > a', str).each(async (index, newHuiseObj) => {
+          newPageHuiseList.push(newHuiseObj);
+        })//each
 
-            HouseObj.location_country = 'Netherlands';
-            HouseObj.location_city = place;
-            HouseObj.location_address = address1 + ' ' + zip;
+        for (newHuiseItem of newPageHuiseList) {
+          await loadOneHouse($, newHuiseItem);
+        }
+        resolve();
+      } else {
+        console.log('There is error in first page.');
+        reject();
+      }
+      console.log('Bye!');
+    })//request
+  });
 
-            let coords = JSON.parse($_detail('hl-page-detail').attr(':location'));
-            HouseObj.location_coordinates_lat = coords.lat;
-            HouseObj.location_coordinates_lng = coords.lon;
-
-            let rooms = $_detail('#kenmerken table td').eq(5).text().trim();
-            HouseObj.size_rooms = rooms;
-
-            let woonOppervlakte = $_detail('#kenmerken table td').eq(9).text().trim()
-            HouseObj.size_living_area = woonOppervlakte;
-
-            /**Price */
-            let pricing = $_detail('.pricing > h2').text().trim();
-            let tempPricing = pricing.split(' ');
-            if (tempPricing[0] === '€') {
-              HouseObj.price_currency = 'EUR';
-            } else if (tempPricing[0] === '$') {
-              HouseObj.price_currency = 'USD';
-            } else if (tempPricing[0] === '£') {
-              HouseObj.price_currency = 'GBP'
-            }
-            HouseObj.price_value = tempPricing[1];
-            /**Price */
-
-            let description = $_detail(".content > p").eq(1).text();
-            HouseObj.description = description;
-            let title = $_detail("meta[property='og:title']").attr('content');
-            HouseObj.title = title;
-
-            /**Image addresses */
-            $_mainImg = cherrio.load($_detail('hl-object-media noscript').text().trim())//Main Img
-            let mainImg_add = $_mainImg('img').attr('src');
-            let Img_addresses = mainImg_add;
-            const imgLength = $_detail('.media-slot .content > img').length;//small images
-            for (let i = 0; i < imgLength; i++) {
-              let ii = i + 1;
-              let searchStr = '.media-slot-' + ii + ' .content > img';
-              let smallImg_add = $_detail(searchStr).attr('src');
-              Img_addresses = Img_addresses + ',' + smallImg_add;
-            }
-            HouseObj.images = Img_addresses;
-            /**Image addresses */
-            let sold = $_detail('h2').attr('style', 'display:inline-block;').text().trim();
-            if (sold.includes('Verkocht')) {
-              HouseObj.sold = 1;
-            } else {
-              HouseObj.sold = 0;
-            }
-            //write File
-            try {
-              (fileIsEmpty) ?
-                await fs.appendFileSync("huiseList.json", JSON.stringify(HouseObj)) :
-                await fs.appendFileSync("huiseList.json", "," + JSON.stringify(HouseObj));
-              fileIsEmpty = false;
-            } catch (err) {
-              console.log('File error: ' + err);
-            }
-
-          } else { console.log('There is a problem in second request loop'); }
-
-        })//request
-
-      })//each
-
-    } else {
-      console.log('There is error in first page.');
-    }
-    console.log('Bye!');
-  })//request
 }
 
-app.listen(port);
-console.log('server running on' + port);
+(async () => {
+  await loadPage(urlNext);//First Page
+
+  for (let pageIndex = 2; pageIndex < 13; pageIndex++) {//Second Page...   12.Page
+    urlNext = `${url}?page=${pageIndex}&order=relevance`;
+    await loadPage(urlNext);
+  }
+
+  try {
+    await fs.writeFileSync("huiseList.json", JSON.stringify(houseList, null, 2));
+  } catch (err) {
+    console.log('File error: ' + err);
+  }
+})();
+
+
+
+

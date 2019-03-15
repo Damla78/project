@@ -159,7 +159,7 @@ apiRouter.route('/houses/cities')
 apiRouter.route('/houses/:id')
   .get((req, res) => {
     const { id } = req.params;
-
+    const sqlOneHouse = `select * from houses where id=${id}`;
     const house = housesData.find(house => { return house.id === parseInt(id, 10) });
     if (house) {
       res.send(house);

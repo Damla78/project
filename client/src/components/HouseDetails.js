@@ -11,7 +11,7 @@ export default class HouseDetails extends React.Component {
     }
   }
   componentDidMount() {
-    //console.log(this.props);
+    console.log("this.props: " + JSON.stringify(this.props));
     const { id } = this.props.match.params;
 
     this.setState({ loading: true, error: null });
@@ -43,9 +43,8 @@ export default class HouseDetails extends React.Component {
     }
     //ASK I couldn't retrieved info
     return (<div>
-
-      {/*id:{houseDetails.id}<br />
-      price:{houseDetails.price_value}<br />*/}
+      id: {JSON.stringify(houseDetails)}<br />
+      price:{houseDetails.price_value}<br />
     </div>);
   }
 }

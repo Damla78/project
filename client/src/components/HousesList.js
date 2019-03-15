@@ -78,6 +78,7 @@ export default class HousesList extends React.Component {
         if (error) {
           this.setState({ houses: [], loading: false, error })
         } else {
+
           this.setState({
             houses: HousesList.houses,
             error: null,
@@ -85,6 +86,7 @@ export default class HousesList extends React.Component {
             perPage: HousesList.HOUSES_PER_PAGE,
             total: HousesList.totalNumHouses[0].total
           });
+
         }
       }).catch(() => {
         this.setState({ error: 'Houses could not be loaded. Sth is wrong.', loading: false });
@@ -117,7 +119,7 @@ export default class HousesList extends React.Component {
         [name]: value
       }
     });//, () => this.fetchHouses(true)
-    console.log(name + " " + value);
+
   }
 
   handleSubmit = (e) => {
@@ -127,7 +129,6 @@ export default class HousesList extends React.Component {
   }
 
   pageChange = (page) => {
-    console.log('**********page: ' + page);
     this.setState({
       ...this.state,
       searchCriteria: {
@@ -149,8 +150,6 @@ export default class HousesList extends React.Component {
         page
       } } = this.state;
 
-
-    console.log('RENDER......perPage:' + perPage + ' total: ' + total + ' page: ' + page);
 
     return (
       <div>
